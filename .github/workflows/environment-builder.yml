@@ -10,15 +10,50 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Assume you manually edit env/config.yml with the regions you want
-      # If you want to automate this, let me know!
+      - name: Install yq
+        run: |
+          sudo wget https://github.com/mikefarah/yq/releases/download/v4.44.1/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
 
-      - name: Commit env/config.yml
+      - name: Parse regions and update deploy/delete workflows
+        run: |
+          REGIONS=$(yq '.available_regions[]' env/config.yml | awk '{printf "\"%s\",\n", $1}' | sed '$ s/,$//')
+          DEFAULT=$(yq '.default_region' env/config.yml)
+
+          update_workflow() {
+            WF=$1
+            cat <<EOF > $WF
+name: $(basename $WF .yml | sed 's/-/_/g' | tr '[:lower:]' '[:upper:]')
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_region:
+        description: "Choose AWS region"
+        required: true
+        default: "$DEFAULT"
+        type: choice
+        options:
+          - $(yq '.available_regions[]' env/config.yml | paste -sd ' - ' -)
+jobs:
+  $(basename $WF .yml):
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      # ... add other steps here ...
+EOF
+          }
+
+          update_workflow .github/workflows/deploy.yml
+          update_workflow .github/workflows/delete.yml
+
+      - name: Commit updated workflows
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add env/config.yml
-          git commit -m "Update environment config"
+          git add .github/workflows/deploy.yml .github/workflows/delete.yml
+          git commit -m "Sync region options in deploy/delete workflows from config"
           git push https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }} HEAD:${{ github.ref }}
