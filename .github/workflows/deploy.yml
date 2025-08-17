@@ -1,0 +1,38 @@
+name: Deploy S3 via CloudFormation
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_region:
+        description: "AWS region (leave blank to use default from env/config.yml)"
+        required: false
+      stack_name:
+        description: "CloudFormation Stack Name (leave blank to use default from env/config.yml)"
+        required: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Load environment config
+        run: |
+          echo "STACK_NAME=$(yq e '.stack_name' env/config.yml)" >> $GITHUB_ENV
+          echo "DEFAULT_REGION=$(yq e '.default_region' env/config.yml)" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ github.event.inputs.aws_region || env.DEFAULT_REGION }}
+
+      - name: Deploy CloudFormation Stack
+        run: |
+          aws cloudformation deploy \
+            --template-file templates/s3-bucket.yml \
+            --stack-name ${{ github.event.inputs.stack_name || env.STACK_NAME }} \
+            --capabilities CAPABILITY_NAMED_IAM
