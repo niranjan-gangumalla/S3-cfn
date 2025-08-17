@@ -1,0 +1,34 @@
+name: Environment Builder
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_region:
+        description: "Default AWS region"
+        required: true
+        default: "ap-south-1"
+      stack_name:
+        description: "Default CloudFormation Stack Name"
+        required: true
+        default: "simple-s3-bucket-stack"
+
+jobs:
+  build-env:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create env/config.yml
+        run: |
+          mkdir -p env
+          echo "stack_name: ${{ github.event.inputs.stack_name }}" > env/config.yml
+          echo "default_region: ${{ github.event.inputs.aws_region }}" >> env/config.yml
+
+      - name: Commit config.yml
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add env/config.yml
+          git commit -m "Update environment config"
+          git push
