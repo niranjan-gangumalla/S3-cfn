@@ -2,20 +2,6 @@ name: Environment Builder
 
 on:
   workflow_dispatch:
-    inputs:
-      aws_region:
-        description: "Select AWS region"
-        required: true
-        default: "ap-south-1"
-        type: choice
-        options:
-          - us-east-1
-          - us-west-1
-          - ap-south-1
-      stack_name:
-        description: "Default CloudFormation Stack Name"
-        required: true
-        default: "simple-s3-bucket-stack"
 
 jobs:
   build-env:
@@ -24,13 +10,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create env/config.yml
-        run: |
-          mkdir -p env
-          echo "stack_name: ${{ github.event.inputs.stack_name }}" > env/config.yml
-          echo "default_region: ${{ github.event.inputs.aws_region }}" >> env/config.yml
+      # Assume you manually edit env/config.yml with the regions you want
+      # If you want to automate this, let me know!
 
-      - name: Commit config.yml
+      - name: Commit env/config.yml
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
