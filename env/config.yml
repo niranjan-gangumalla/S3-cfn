@@ -1,2 +1,10 @@
 stack_name: simple-s3-bucket-stack
+
+# List of available regions for deployment
+available_regions:
+  - us-east-1
+  - us-west-1
+  - ap-south-1
+
+# Default region if not specified during workflow execution
 default_region: ap-south-1
